@@ -1,0 +1,343 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<script type="text/javascript" src="/gbi/extjs/js/ext-all.js"></script>
+<script type="text/javascript" src="/gbi/packages/ext-theme-neptune/build/ext-theme-neptune.js"></script>
+<script type="text/javascript" src="/gbi/extjs/js/ext-lang-zh_CN.js"></script>
+<link rel="stylesheet" href="/gbi/resources/ext-theme-neptune/ext-theme-neptune-all.css">
+<link rel="stylesheet" href="/gbi/resources/css/styles.css">
+<style type="text/css">
+
+</style>
+<script type="text/javascript">
+Ext.ns('zc');
+/**
+* 获取项目根路径
+* */
+zc.bp = function () {
+    var curWwwPath = window.document.location.href;
+    var pathName = window.document.location.pathname;
+    var pos = curWwwPath.indexOf(pathName);
+    var localhostPath = curWwwPath.substring(0, pos);
+    var projectName = pathName.substring(0, pathName.substr(1).indexOf('/') + 1);
+    return (localhostPath + projectName);
+};
+/**
+* 获取小星星
+* */
+zc.getStar = function () {
+    return '<span style="color:#FF0000;">*</span>';
+};
+/**
+* @Description	Html编辑器 插入图片控件
+* @author		张川(cr10210206@163.com)
+*/
+Ext.define('Ext.zc.form.HtmlEditorImage', {
+    extend: 'Ext.util.Observable',
+    alias: 'widget.zc_form_HtmlEditorImage',
+    langTitle: '插入图片',
+    langIconCls: 'heditImgIcon',
+    init: function (view) {
+        var scope = this;
+        view.on('render', function () {
+            scope.onRender(view);
+        });
+    },
+
+    /**
+    * 添加"插入图片"按钮
+    * */
+    onRender: function (view) {
+        var scope = this;
+        view.getToolbar().add({
+            iconCls: scope.langIconCls,
+            tooltip: {
+                title: scope.langTitle,
+                width: 100
+            },
+            handler: function () {
+                scope.showImgWindow(view);
+            }
+        });
+    },
+
+    /**
+    * 显示"插入图片"窗体
+    * */
+    showImgWindow: function (view) {
+        var scope = this;
+        Ext.create('Ext.window.Window', {
+            width: 400,
+            height: 200,
+            title: scope.langTitle,
+            layout: 'fit',
+            autoShow: true,
+            modal: true,
+            resizable: false,
+            maximizable: false,
+            constrain: true,
+            plain: true,
+            enableTabScroll: true,
+            //bodyPadding: '1 1 1 1',
+            border: false,
+            items: [{
+                xtype: 'panel',
+                header: false,
+                enableTabScroll: true,
+                bodyPadding: '1 1 1 1',
+                items: [{
+                    xtype: 'form',
+                    layout: 'column',
+                    autoScroll: true,
+                    border: false,
+                    defaults: {
+                        columnWidth: 1,
+                        labelWidth: 70,
+                        labelAlign: 'right',
+                        padding: '5 5 5 5',
+                        allowBlank: false
+                    },
+                    items: [{
+                        xtype: 'fileuploadfield',
+                        fieldLabel: '选择文件',
+                        beforeLabelTextTpl: zc.getStar(),
+                        buttonText: '请选择...',
+                        name: 'file',
+                        emptyText: '请选择图片',
+                        blankText: '图片不能为空',
+                        listeners: {
+                            change: function (view, value, eOpts) {
+                                scope.uploadImgCheck(view, value);
+                            }
+                        }
+                    },{
+                        columnWidth: 1,
+                        xtype: 'fieldset',
+                        title: '上传须知',
+                        layout: {
+                            type: 'table',
+                            columns: 1
+                        },
+                        collapsible: false, //是否可折叠
+                        defaultType: 'label', //默认的Form表单组件
+                        items: [{
+                            html: '1.上传图片不超过100KB'
+                        }, {
+                            html: '2.为了保证图片能正常使用，我们支持以下格式的图片上传'
+                        }, {
+                            html: '   jpg,jpeg,png,gif'
+                        }]
+                    }],
+                    buttons: [{
+                        text: '保存',
+                        action: 'btn_save',
+                        handler: function (btn) {
+                            scope.saveUploadImg(btn, view);
+                        }
+                    }, {
+                        text: '取消',
+                        handler: function (btn) {
+                            btn.up('window').close();
+                        }
+                    }]
+                }]
+            }]
+        });
+    },
+
+    /**
+    * 上传图片验证
+    **/
+    uploadImgCheck: function (fileObj, fileName) {
+        var scope = this;
+        //图片类型验证
+        if (!(scope.getImgTypeCheck(scope.getImgHZ(fileName)))) {
+            Ext.MessageBox.alert('温馨提示', '上传图片类型有误');
+            fileObj.reset(); //清空上传内容
+            return;
+        }
+    },
+
+    /**
+    * 获取图片后缀(小写)
+    * */
+    getImgHZ: function (imgName) {
+        //后缀
+        var hz = '';
+        //图片名称中最后一个.的位置
+        var index = imgName.lastIndexOf('.');
+        if (index != -1) {
+            //后缀转成小写
+            hz = imgName.substr(index + 1).toLowerCase();
+        }
+        return hz;
+    },
+
+    /**
+    * 图片类型验证
+    * */
+    getImgTypeCheck: function (hz) {
+        var typestr = 'jpg,jpeg,png,gif';
+        var types = typestr.split(','); //图片类型
+        for (var i = 0; i < types.length; i++) {
+            if (hz == types[i]) {
+                return true;
+            }
+        }
+        return false;
+    },
+
+    /**
+    * 上传图片
+    * */
+    saveUploadImg: function (btn, view) {
+        var scope = this;
+        var windowObj = btn.up('window'); //获取Window对象
+        var formObj = btn.up('form'); //获取Form对象
+        if (formObj.isValid()) { //验证Form表单
+            formObj.form.doAction('submit', {
+                url: zc.bp() + '/img/upload.htm',
+                method: 'POST',
+                submitEmptyText: false,
+                waitMsg: '正在上传图片,请稍候...',
+                timeout: 60000, // 60s
+                success: function (response, options) {
+                    var result = options.result;
+                    if (!result.success) {
+                        Ext.MessageBox.alert('温馨提示', result.msg);
+                        return;
+                    }
+                    scope.insertImg(view, result.data);
+                    windowObj.close(); //关闭窗体
+                },
+                failure: function (response, options) {
+                    Ext.MessageBox.alert('温馨提示', options.result.msg);
+                }
+            });
+        }
+    },
+
+    /**
+    * 保存远程的图片
+    * */
+    saveRemoteImg: function (btn, view) {
+        var scope = this;
+        var windowObj = btn.up('window'); //获取Window对象
+        var formObj = btn.up('form'); //获取Form对象
+        if (formObj.isValid()) {//验证Form表单
+            var values = formObj.getValues(); //获取Form表单的值
+            scope.insertImg(view, values);
+            windowObj.close(); //关闭窗体
+        }
+    },
+
+    /**
+    * 插入图片
+    * */
+    insertImg: function (view, data) {
+        var url = data.url;
+        var content = data.content;
+        var width = data.width;
+        var height = data.height;
+        var str = '<img src="' + url + '" border="0" ';
+        if (content != undefined && content != null && content != '') {
+            str += ' title="' + content + '" ';
+        }
+        if (width != undefined && width != null && width != 0) {
+            str += ' width="' + width + '" ';
+        }
+        if (height != undefined && height != null && height != 0) {
+            str += ' height="' + height + '" ';
+        }
+        str += ' />';
+        view.insertAtCursor(str);
+    }
+});
+
+/*
+ * File: app/view/MyViewport.js
+ *
+ * This file was generated by Sencha Architect version 3.0.4.
+ * http://www.sencha.com/products/architect/
+ *
+ * This file requires use of the Ext JS 4.2.x library, under independent license.
+ * License of Sencha Architect does not include license for Ext JS 4.2.x. For more
+ * details see http://www.sencha.com/license or contact license@sencha.com.
+ *
+ * This file will be auto-generated each and everytime you save your project.
+ *
+ * Do NOT hand edit this file.
+ */
+
+Ext.define('edit.view.MyViewport', {
+    extend:  Ext.container.Viewport ,
+
+               
+                                   
+      
+
+    layout: 'fit',
+
+    initComponent: function() {
+        var me = this;
+
+        Ext.applyIf(me, {
+            items: [
+                {
+                	xtype: 'htmleditor',
+                	border: true,
+                	id: 'context',
+                	plugins: [
+                	Ext.create('Ext.zc.form.HtmlEditorImage')
+                	],
+                	height: 400,
+                	anchor: '100%'
+                }
+            ]
+        });
+
+        me.callParent(arguments);
+    }
+
+});
+
+
+/*
+ * File: app.js
+ *
+ * This file was generated by Sencha Architect version 3.0.4.
+ * http://www.sencha.com/products/architect/
+ *
+ * This file requires use of the Ext JS 4.2.x library, under independent license.
+ * License of Sencha Architect does not include license for Ext JS 4.2.x. For more
+ * details see http://www.sencha.com/license or contact license@sencha.com.
+ *
+ * This file will be auto-generated each and everytime you save your project.
+ *
+ * Do NOT hand edit this file.
+ */
+
+// @require @packageOverrides
+Ext.Loader.setConfig({
+    enabled: true
+});
+
+
+Ext.application({
+    views: [
+        'MyViewport'
+    ],
+    name: 'edit',
+
+    launch: function() {
+        Ext.create('edit.view.MyViewport');
+    }
+
+});
+</script>
+</head>
+<body>
+
+</body>
+</html>
